@@ -1,6 +1,23 @@
 from django.db import models, transaction
 from django.db.models import Sum
 from decimal import Decimal
+# models.py
+from django.contrib.auth.models import AbstractUser
+
+
+class CustomUser(AbstractUser):
+    ROLES = [
+        ('admin', 'Admin'),
+        ('cashier', 'Cashier'),
+        ('viewer', 'Viewer'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLES, default='cashier')
+    username = models.CharField(max_length=150, unique=True)
+    email = models.EmailField(unique=True)
+
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
