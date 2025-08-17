@@ -9,4 +9,12 @@ class Product(models.Model):
     selling_price = models.DecimalField(max_digits=10,decimal_places=2)
     def __str(self):
         return self.name
-    
+
+
+class Sale(models.Model):
+    product = models.ForeignKey(Product,on_delete=models.CASCADE)
+    quantity = models.PositiveIntengerField()
+    total_price = models.DecimalField(max_digits=10,decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+
+
