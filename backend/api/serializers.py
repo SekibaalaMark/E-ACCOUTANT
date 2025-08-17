@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import Product
-from .models import CustomUser
+from .models import *
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -23,6 +22,42 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)  # hash password
         user.save()
         return user
+
+
+
+
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+
+    def validate(self, attrs):
+        username = attrs.get("username")
+        password = attrs.get("password")
+
+        # authenticate() checks against Django's AUTHENTICATION_BACKENDS
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            raise serializers.ValidationError("Invalid username or password.")
+
+        if not user.is_active:
+            raise serializers.ValidationError("This account is inactive.")
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+
+        return {
+            "username": user.username,
+            "role": user.role,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }
+
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
