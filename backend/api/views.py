@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework import serializers
 
 # Create your views here.
 # views.py
@@ -55,3 +56,36 @@ class LoginAPIView(generics.GenericAPIView):
             }
         }, status=status.HTTP_200_OK)
 
+
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from .models import Product
+from .serializers import ProductSerializer
+
+class ProductViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for viewing and editing Product instances.
+    Provides standard CRUD operations: list, retrieve, create, update, and delete.
+    """
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    #permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        """
+        Save the product instance with validated data.
+
+        """
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
+
+    def perform_update(self, serializer):
+        """
+        Update the product instance with validated data.
+        """
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
