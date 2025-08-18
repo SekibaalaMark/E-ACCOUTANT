@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from rest_framework import serializers
+from .models import *
+from .serializers import *
 
 # Create your views here.
 # views.py
@@ -89,3 +91,29 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer.save()
         else:
             raise serializers.ValidationError(serializer.errors)
+
+
+
+
+class SaleViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for viewing and editing Sale instances.
+    Provides standard CRUD operations: list, retrieve, create, update, and delete.
+    """
+    queryset = Sale.objects.all()
+    serializer_class = SaleSerializer
+    #permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        """
+        Save the sale instance with validated data, triggering the model's save method.
+        """
+        if serializer.is_valid():   
+            serializer.save()
+
+    def perform_update(self, serializer):
+        """
+        Update the sale instance with validated data, triggering the model's save method.
+        """
+        if serializer.is_valid():
+            serializer.save()
