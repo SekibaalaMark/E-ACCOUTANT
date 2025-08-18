@@ -92,3 +92,39 @@ class ProductSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"name": "Product name cannot be empty."})
         
         return data
+    
+
+
+
+
+class SaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sale
+        fields = ['id', 'product', 'quantity', 'total_price', 'date']
+        read_only_fields = ['id', 'total_price', 'date']
+
+    def validate(self, data):
+        # Validate quantity is positive
+        if data.get('quantity') <= 0:
+            raise serializers.ValidationError({"quantity": "Quantity must be positive."})
+
+        # Validate sufficient stock for the product
+        product = data.get('product')
+        quantity = data.get('quantity')
+        if product.stock < quantity:
+            raise serializers.ValidationError({
+                "quantity": f"Insufficient stock. Available: {product.stock}, Requested: {quantity}"
+            })
+
+        return data
+
+    def create(self, validated_data):
+        # Create a new Sale instance, letting the model's save method handle total_price and stock
+        return Sale.objects.create(**validated_data)
+
+    def update(self, validated_data, instance):
+        # Update quantity and product, letting the model's save method handle stock adjustments
+        instance.product = validated_data.get('product', instance.product)
+        instance.quantity = validated_data.get('quantity', instance.quantity)
+        instance.save()  # Triggers model's save method for total_price and stock updates
+        return instance
