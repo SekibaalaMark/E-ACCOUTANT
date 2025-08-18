@@ -218,4 +218,23 @@ class PurchaseSerializer(serializers.ModelSerializer):
 
 
 
-
+class ExpenseSerializer(serializers.ModelSerializer):
+    # Make date read-only since it's auto-generated
+    date = serializers.DateTimeField(read_only=True)
+    
+    class Meta:
+        model = Expense
+        fields = ['id', 'title', 'amount', 'date']
+        read_only_fields = ['date']
+    
+    def validate_amount(self, value):
+        """Validate that amount is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be positive")
+        return value
+    
+    def validate_title(self, value):
+        """Validate title is not empty"""
+        if not value.strip():
+            raise serializers.ValidationError("Title cannot be empty")
+        return value.strip()
