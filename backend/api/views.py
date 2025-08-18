@@ -117,3 +117,40 @@ class SaleViewSet(viewsets.ModelViewSet):
         """
         if serializer.is_valid():
             serializer.save()
+
+
+
+
+
+
+class PurchaseViewSet(viewsets.ModelViewSet):
+    """
+    Simple ModelViewSet for Purchase model
+    Provides all CRUD operations:
+    - GET /purchases/ (list all)
+    - POST /purchases/ (create new)
+    - GET /purchases/{id}/ (get one)
+    - PUT/PATCH /purchases/{id}/ (update)
+    - DELETE /purchases/{id}/ (delete)
+    """
+    queryset = Purchase.objects.select_related('product').all()
+    serializer_class = PurchaseSerializer
+    #permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        """
+        Save the purchase instance with validated data.
+        """
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
+
+    def perform_update(self, serializer):
+        """
+        Update the purchase instance with validated data.
+        """
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
