@@ -128,3 +128,94 @@ class SaleSerializer(serializers.ModelSerializer):
         instance.quantity = validated_data.get('quantity', instance.quantity)
         instance.save()  # Triggers model's save method for total_price and stock updates
         return instance
+    
+
+
+from rest_framework import serializers
+from django.core.exceptions import ValidationError
+from .models import Purchase, Product
+
+
+class PurchaseSerializer(serializers.ModelSerializer):
+    # Read-only fields that are calculated automatically
+    total_cost = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    date = serializers.DateTimeField(read_only=True)
+    
+    # Optional: Include product details in the response
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_buying_price = serializers.DecimalField(source='product.buying_price', max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Purchase
+        fields = [
+            'id',
+            'product',
+            'product_name',  # Extra field for convenience
+            'product_buying_price',  # Extra field for convenience
+            'quantity',
+            'total_cost',
+            'date'
+        ]
+        read_only_fields = ['total_cost', 'date']
+
+    def validate_quantity(self, value):
+        """Validate that quantity is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Quantity must be positive")
+        return value
+
+    def validate_product(self, value):
+        """Validate that the product exists and has valid buying_price"""
+        try:
+            if value.buying_price < 0:
+                raise serializers.ValidationError("Product buying price cannot be negative")
+        except AttributeError:
+            raise serializers.ValidationError("Invalid product")
+        return value
+
+    def validate(self, attrs):
+        """Cross-field validation"""
+        product = attrs.get('product')
+        quantity = attrs.get('quantity')
+        
+        if product and quantity:
+            # Check if this would exceed maximum stock limit
+            current_stock = product.stock
+            if self.instance:
+                # For updates, consider the change in quantity
+                old_quantity = self.instance.quantity
+                stock_change = quantity - old_quantity
+                projected_stock = current_stock + stock_change
+            else:
+                # For new purchases
+                projected_stock = current_stock + quantity
+            
+            if projected_stock > 1_000_000:
+                raise serializers.ValidationError(
+                    f"This purchase would cause stock for {product.name} to exceed maximum limit of 1,000,000"
+                )
+        
+        return attrs
+
+    def create(self, validated_data):
+        """Create a new purchase"""
+        try:
+            return Purchase.objects.create(**validated_data)
+        except ValidationError as e:
+            # Convert Django ValidationError to DRF ValidationError
+            raise serializers.ValidationError(str(e))
+
+    def update(self, instance, validated_data):
+        """Update an existing purchase"""
+        try:
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            return instance
+        except ValidationError as e:
+            # Convert Django ValidationError to DRF ValidationError
+            raise serializers.ValidationError(str(e))
+
+
+
+
