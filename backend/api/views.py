@@ -154,3 +154,30 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             serializer.save()
         else:
             raise serializers.ValidationError(serializer.errors)
+
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    """
+    Simple ModelViewSet for Expense model
+    Provides all CRUD operations:
+    - GET /expenses/ (list all)
+    - POST /expenses/ (create new)
+    - GET /expenses/{id}/ (get one)
+    - PUT/PATCH /expenses/{id}/ (update)
+    - DELETE /expenses/{id}/ (delete)
+    """
+    queryset = Expense.objects.all()
+    serializer_class = ExpenseSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
+
+    def perform_update(self, serializer):
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            raise serializers.ValidationError(serializer.errors)
