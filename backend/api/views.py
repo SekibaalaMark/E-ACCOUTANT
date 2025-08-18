@@ -168,7 +168,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     """
     queryset = Expense.objects.all()
     serializer_class = ExpenseSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         if serializer.is_valid():
@@ -181,3 +181,123 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             serializer.save()
         else:
             raise serializers.ValidationError(serializer.errors)
+        
+
+
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
+from .financial_service import FinancialService
+
+
+class FinancialReportsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for financial reports and calculations
+    """
+    
+    @action(detail=False, methods=['get'])
+    def weekly_report(self, request):
+        """
+        Get weekly financial report
+        Usage: GET /financial-reports/weekly_report/?week=30&year=2024
+        """
+        week = request.query_params.get('week')
+        year = request.query_params.get('year')
+        
+        if year:
+            year = int(year)
+        
+        if week:
+            week = int(week)
+        
+        try:
+            report = FinancialService.generate_financial_report('weekly', year=year, week=week)
+            return Response({
+                'success': True,
+                'report_type': 'Weekly Financial Report',
+                'data': report
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False, methods=['get'])
+    def monthly_report(self, request):
+        """
+        Get monthly financial report
+        Usage: GET /financial-reports/monthly_report/?month=8&year=2024
+        """
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
+        
+        if year:
+            year = int(year)
+        if month:
+            month = int(month)
+        
+        try:
+            report = FinancialService.generate_financial_report('monthly', year=year, month=month)
+            return Response({
+                'success': True,
+                'report_type': 'Monthly Financial Report',
+                'data': report
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False, methods=['get'])
+    def yearly_report(self, request):
+        """
+        Get yearly financial report
+        Usage: GET /financial-reports/yearly_report/?year=2024
+        """
+        year = request.query_params.get('year')
+        
+        if year:
+            year = int(year)
+        
+        try:
+            report = FinancialService.generate_financial_report('yearly', year=year)
+            return Response({
+                'success': True,
+                'report_type': 'Yearly Financial Report',
+                'data': report
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=False, methods=['get'])
+    def current_period(self, request):
+        """
+        Get financial report for current week, month, and year
+        Usage: GET /financial-reports/current_period/
+        """
+        try:
+            weekly = FinancialService.generate_financial_report('weekly')
+            monthly = FinancialService.generate_financial_report('monthly')
+            yearly = FinancialService.generate_financial_report('yearly')
+            
+            return Response({
+                'success': True,
+                'report_type': 'Current Period Summary',
+                'data': {
+                    'this_week': weekly,
+                    'this_month': monthly,
+                    'this_year': yearly
+                }
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
