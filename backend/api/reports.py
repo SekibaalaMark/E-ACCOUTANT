@@ -64,3 +64,67 @@ def get_profit_calculations(period='daily'):
         })
 
     return results
+
+
+
+def get_overall_profits():
+    """
+    Calculate overall (all-time) profits.
+    Returns a dict with 'revenue', 'cogs', 'expenses', 'profit'
+    """
+    sales_agg = Sale.objects.aggregate(
+        revenue=Sum('total_price', output_field=DecimalField()),
+        cogs=Sum(ExpressionWrapper(F('quantity') * F('product__buying_price'), output_field=DecimalField()))
+    )
+    expenses_agg = Expense.objects.aggregate(
+        expenses=Sum('amount', output_field=DecimalField())
+    )
+
+    revenue = sales_agg['revenue'] or Decimal('0.00')
+    cogs = sales_agg['cogs'] or Decimal('0.00')
+    expenses = expenses_agg['expenses'] or Decimal('0.00')
+    profit = revenue - cogs - expenses
+
+    return {
+        'revenue': revenue,
+        'cogs': cogs,
+        'expenses': expenses,
+        'profit': profit
+    }
+
+# Example usage in a view (add to your views.py):
+# from django.http import JsonResponse
+# from .reports import get_profit_calculations, get_overall_profits
+
+# def profit_report(request, period='daily'):
+#     if period == 'overall':
+#         data = get_overall_profits()
+#     else:
+#         data = get_profit_calculations(period)
+#     return JsonResponse(data, safe=False)
+
+# For report generation (e.g., simple console print for testing):
+# print(get_profit_calculations('daily'))
+# print(get_overall_profits())
+
+# To generate a CSV report (example extension):
+# import csv
+# from django.http import HttpResponse
+
+# def export_profit_csv(request, period='daily'):
+#     if period == 'overall':
+#         data = [get_overall_profits()]
+#     else:
+#         data = get_profit_calculations(period)
+    
+#     response = HttpResponse(content_type='text/csv')
+#     response['Content-Disposition'] = f'attachment; filename="{period}_profits.csv"'
+    
+#     writer = csv.writer(response)
+#     writer.writerow(['Period', 'Revenue', 'COGS', 'Expenses', 'Profit'])  # Header
+    
+#     for row in data:
+#         period_str = row.get('period', 'Overall') or 'Overall'
+#         writer.writerow([period_str, row['revenue'], row['cogs'], row['expenses'], row['profit']])
+    
+#     return response
