@@ -1,13 +1,8 @@
-# reports.py (Create a new file in your app directory, e.g., your_app/reports.py)
-# This module provides functions to calculate profits (revenue - COGS - expenses) 
-# aggregated by daily, weekly, monthly, or yearly periods, as well as overall totals.
-# You can import and use these in your views, management commands, or templates for report generation.
-# For actual report generation (e.g., PDF/CSV export), you can extend this with libraries like ReportLab or csv.
-
+# your_app/reports.py
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
 from decimal import Decimal
-from .models import Sale, Expense  # Assuming this is in the same app as models.py
+from .models import Sale, Expense
 
 def get_profit_calculations(period='daily'):
     """
@@ -56,15 +51,14 @@ def get_profit_calculations(period='daily'):
         expenses = expenses_dict.get(p, Decimal('0.00'))
         profit = revenue - cogs - expenses
         results.append({
-            'period': p,
-            'revenue': revenue,
-            'cogs': cogs,
-            'expenses': expenses,
-            'profit': profit
+            'period': p.strftime('%Y-%m-%d') if period == 'daily' else p.strftime('%Y-%m') if period == 'monthly' else p.strftime('%Y'),
+            'revenue': float(revenue),  # Convert Decimal to float for JSON serialization
+            'cogs': float(cogs),
+            'expenses': float(expenses),
+            'profit': float(profit)
         })
 
     return results
-
 
 
 def get_overall_profits():
