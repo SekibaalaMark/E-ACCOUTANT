@@ -301,3 +301,30 @@ class FinancialReportsViewSet(viewsets.ViewSet):
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+from .reports import get_profit_calculations, get_overall_profits
+
+
+class ProfitReportView(APIView):
+    """
+    API endpoint to retrieve profit reports by period (daily, weekly, monthly, yearly) or overall.
+    - GET /api/profits/?period=<daily|weekly|monthly|yearly|overall>
+    """
+    def get(self, request):
+        # Check user role (optional: restrict to admin or viewer)
+        '''
+        if not request.user.is_authenticated or request.user.role not in ['admin', 'viewer']:
+            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
+            '''
+
+        period = request.query_params.get('period', 'daily')
+
+        try:
+            if period == 'overall':
+                data = get_overall_profits()
+            else:
+                data = get_profit_calculations(period)
+            return Response(data, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
