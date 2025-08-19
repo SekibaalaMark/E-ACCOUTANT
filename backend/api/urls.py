@@ -27,12 +27,3 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
 
 ]
-
-
-'''
-FINANCIAL REPORT ENDPOINTS:
-GET    /api/financial-reports/weekly_report/     - Weekly report
-GET    /api/financial-reports/monthly_report/    - Monthly report
-GET    /api/financial-reports/yearly_report/     - Yearly report
-GET    /api/financial-reports/current_period/    - All current periods
-'''
