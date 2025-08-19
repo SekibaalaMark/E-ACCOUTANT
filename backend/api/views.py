@@ -328,3 +328,44 @@ class ProfitReportView(APIView):
             return Response(data, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+import csv
+from django.http import HttpResponse
+from rest_framework.views import APIView
+
+class ProfitReportCSVView(APIView):
+    """
+    API endpoint to download profit reports as CSV.
+    - GET /api/profits/csv/?period=<daily|weekly|monthly|yearly|overall>
+    """
+    def get(self, request):
+        # Check user role (optional: restrict to admin)
+        '''
+        if not request.user.is_authenticated or request.user.role != 'admin':
+            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
+            '''
+
+        period = request.query_params.get('period', 'daily')
+
+        try:
+            if period == 'overall':
+                data = [get_overall_profits()]
+            else:
+                data = get_profit_calculations(period)
+
+            # Create CSV response
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{period}_profits.csv"'
+
+            writer = csv.writer(response)
+            writer.writerow(['Period', 'Revenue', 'COGS', 'Expenses', 'Profit'])  # Header
+
+            for row in data:
+                period_str = row.get('period', 'Overall') or 'Overall'
+                writer.writerow([period_str, row['revenue'], row['cogs'], row['expenses'], row['profit']])
+
+            return response
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
