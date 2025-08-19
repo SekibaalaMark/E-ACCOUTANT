@@ -61,3 +61,27 @@ def get_profit_calculations(period='daily'):
     return results
 
 
+def get_overall_profits():
+    """
+    Calculate overall (all-time) profits.
+    Returns a dict with 'revenue', 'cogs', 'expenses', 'profit'
+    """
+    sales_agg = Sale.objects.aggregate(
+        revenue=Sum('total_price', output_field=DecimalField()),
+        cogs=Sum(ExpressionWrapper(F('quantity') * F('product__buying_price'), output_field=DecimalField()))
+    )
+    expenses_agg = Expense.objects.aggregate(
+        expenses=Sum('amount', output_field=DecimalField())
+    )
+
+    revenue = sales_agg['revenue'] or Decimal('0.00')
+    cogs = sales_agg['cogs'] or Decimal('0.00')
+    expenses = expenses_agg['expenses'] or Decimal('0.00')
+    profit = revenue - cogs - expenses
+
+    return {
+        'revenue': float(revenue),
+        'cogs': float(cogs),
+        'expenses': float(expenses),
+        'profit': float(profit)
+    }
