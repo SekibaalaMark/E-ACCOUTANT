@@ -19,6 +19,7 @@ router.register(r'financial-reports', FinancialReportsViewSet, basename='financi
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(), name='user-register'),
     path("login/", LoginAPIView.as_view(), name="login"),
+    path('profits/', ProfitReportView.as_view(), name='profit-report'),
     path('', include(router.urls)),
 
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
