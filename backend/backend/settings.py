@@ -1,7 +1,10 @@
 
-
+from dotenv import load_dotenv
+load_dotenv()
+import os
 from pathlib import Path
-
+import os
+import dj_database_url
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -11,6 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-e(kjl(6qdka!4s8n8#)7y4ph6&exrx@$&%)bt%cfv!sr(_lyi9'
+#SECRET_KEY = os.environ.get('SECRET_KEY', 'your_dev_secret')  # Use environment variable or default for development
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -66,13 +70,13 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL')  # we’ll keep it in env var
+    )
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
