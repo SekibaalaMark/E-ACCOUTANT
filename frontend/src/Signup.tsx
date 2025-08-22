@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 const Signup: React.FC = () => {
   const [form, setForm] = useState({
@@ -83,6 +84,12 @@ const Signup: React.FC = () => {
         </button>
         {error && <div className="error">{error}</div>}
         {success && <div className="success">Signup successful!</div>}
+        <div className="signup-link">
+          Already have an account?{" "}
+          <Link to="/" className="link-btn">
+            Login
+          </Link>
+        </div>
       </form>
     </div>
   );
