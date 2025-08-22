@@ -44,7 +44,7 @@ const AddProduct: React.FC = () => {
   };
 
   return (
-    <div className="dashboard-content">
+    <div className="dashboard-content large-form-content">
       <h2>Add Product</h2>
       <form className="product-form" onSubmit={handleSubmit}>
         <input

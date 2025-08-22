@@ -145,3 +145,52 @@
 .logout-btn:hover {
   background: #b71c1c;
 }
+
+
+/* Add or update in: c:\Users\ASUM COMPUTERS\Desktop\E-ACCOUTANT\frontend\src\AdminDashboard.css */
+.expense-content {
+  max-width: 700px;
+  width: 100%;
+}
+
+.expense-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.expense-form input {
+  padding: 1rem;
+  font-size: 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.expense-form button {
+  padding: 1rem;
+  font-size: 1.1rem;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+@media (max-width: 900px) {
+  .expense-content {
+    max-width: 98vw;
+  }
+}
+
+/* Add to: c:\Users\ASUM COMPUTERS\Desktop\E-ACCOUTANT\frontend\src\AdminDashboard.css */
+.large-form-content {
+  max-width: 700px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .large-form-content {
+    max-width: 98vw;
+  }
+}
