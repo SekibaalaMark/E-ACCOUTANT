@@ -1,19 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./Login";
 import Signup from "./Signup";
 import "./App.css";
 
 function App() {
-  const [showSignup, setShowSignup] = useState(false);
-
   return (
-    <div>
-      {showSignup ? (
-        <Signup />
-      ) : (
-        <Login onSignupClick={() => setShowSignup(true)} />
-      )}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={<Login />} />
+      </Routes>
+    </Router>
   );
 }
 
