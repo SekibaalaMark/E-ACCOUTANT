@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login: React.FC = () => {
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,8 +19,8 @@ const Login: React.FC = () => {
     try {
       const res = await axios.post("https://e-accoutant.onrender.com/api/login/", form);
       if (res.data.user.role === "admin") {
-        alert("Login successful! Welcome, admin.");
-        // TODO: Redirect to admin dashboard
+        // Redirect to admin dashboard
+        navigate("/admin");
       } else {
         alert("Only admin dashboard is available for now.");
       }
