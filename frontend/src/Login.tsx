@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
-interface Props {
-  onSignupClick: () => void;
-}
-
-const Login: React.FC<Props> = ({ onSignupClick }) => {
+const Login: React.FC = () => {
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +17,6 @@ const Login: React.FC<Props> = ({ onSignupClick }) => {
     setError(null);
     try {
       const res = await axios.post("https://e-accoutant.onrender.com/api/login/", form);
-      // For now, just log the response. Later, redirect based on role.
       if (res.data.user.role === "admin") {
         alert("Login successful! Welcome, admin.");
         // TODO: Redirect to admin dashboard
@@ -59,9 +55,9 @@ const Login: React.FC<Props> = ({ onSignupClick }) => {
         {error && <div className="error">{error}</div>}
         <div className="signup-link">
           Don't have an account?{" "}
-          <button type="button" onClick={onSignupClick} className="link-btn">
+          <Link to="/signup" className="link-btn">
             Sign Up
-          </button>
+          </Link>
         </div>
       </form>
     </div>
