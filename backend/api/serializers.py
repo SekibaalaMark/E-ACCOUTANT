@@ -67,7 +67,8 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'brand', 'stock', 'buying_price', 'selling_price']
         read_only_fields = ['id']
         extra_kwargs = {
-            'brand': {'required': True}
+            'brand': {'required': True},
+            'stock': {'required': True}
         }
 
     def validate(self, data):
