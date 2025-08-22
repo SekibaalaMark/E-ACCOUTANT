@@ -99,3 +99,82 @@
     max-width: 95vw;
   }
 }
+
+/* ...existing code... */
+.login-container, .signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+.login-form, .signup-form {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-form h2, .signup-form h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.login-form input, .signup-form input,
+.signup-form select {
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.login-form button, .signup-form button {
+  padding: 0.7rem;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.login-form button:disabled, .signup-form button:disabled {
+  background: #90caf9;
+}
+
+.error {
+  color: #d32f2f;
+  text-align: center;
+}
+
+.success {
+  color: #388e3c;
+  text-align: center;
+}
+
+.signup-link {
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 1em;
+  padding: 0;
+}
+
+@media (max-width: 500px) {
+  .login-form, .signup-form {
+    padding: 1rem;
+    max-width: 95vw;
+  }
+}
+/* ...existing code... */
