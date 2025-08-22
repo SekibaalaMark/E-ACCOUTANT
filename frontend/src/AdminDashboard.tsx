@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import AddProduct from "./AddProduct";
 import AddSale from "./AddSale";
+import AddPurchase from "./AddPurchase";
 import "./AdminDashboard.css";
 
 const AdminDashboard: React.FC = () => {
@@ -23,11 +24,18 @@ const AdminDashboard: React.FC = () => {
           >
             Add Sale
           </li>
+          <li
+            className={active === "add-purchase" ? "active" : ""}
+            onClick={() => setActive("add-purchase")}
+          >
+            Add Purchase
+          </li>
         </ul>
       </aside>
       <main className="dashboard-main">
         {active === "add-product" && <AddProduct />}
         {active === "add-sale" && <AddSale />}
+        {active === "add-purchase" && <AddPurchase />}
       </main>
     </div>
   );
