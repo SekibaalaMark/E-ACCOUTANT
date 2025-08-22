@@ -4,6 +4,8 @@ import AddProduct from "./AddProduct";
 import AddSale from "./AddSale";
 import AddPurchase from "./AddPurchase";
 import AddExpense from "./AddExpense";
+import ProfitReports from "./ProfitReports";
+import StockStats from "./StockStats";
 import "./AdminDashboard.css";
 
 const AdminDashboard: React.FC = () => {
@@ -11,6 +13,8 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Clear any stored tokens
+    localStorage.removeItem('userToken');
     navigate("/");
   };
 
@@ -31,6 +35,12 @@ const AdminDashboard: React.FC = () => {
           <li className={active === "add-expense" ? "active" : ""} onClick={() => setActive("add-expense")}>
             Add Expense
           </li>
+          <li className={active === "profit-reports" ? "active" : ""} onClick={() => setActive("profit-reports")}>
+            Profit Reports
+          </li>
+          <li className={active === "stock-stats" ? "active" : ""} onClick={() => setActive("stock-stats")}>
+            Stock Stats
+          </li>
         </ul>
         <button className="logout-btn" onClick={handleLogout}>
           LOGOUT
@@ -41,6 +51,8 @@ const AdminDashboard: React.FC = () => {
         {active === "add-sale" && <AddSale />}
         {active === "add-purchase" && <AddPurchase />}
         {active === "add-expense" && <AddExpense />}
+        {active === "profit-reports" && <ProfitReports />}
+        {active === "stock-stats" && <StockStats />}
       </main>
     </div>
   );
