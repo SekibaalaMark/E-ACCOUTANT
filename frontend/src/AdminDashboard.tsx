@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddProduct from "./AddProduct";
 import AddSale from "./AddSale";
 import AddPurchase from "./AddPurchase";
@@ -6,6 +7,12 @@ import "./AdminDashboard.css";
 
 const AdminDashboard: React.FC = () => {
   const [active, setActive] = useState("add-product");
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear any stored tokens here if you use them
+    navigate("/");
+  };
 
   return (
     <div className="dashboard-container">
@@ -31,6 +38,9 @@ const AdminDashboard: React.FC = () => {
             Add Purchase
           </li>
         </ul>
+        <button className="logout-btn" onClick={handleLogout}>
+          LOGOUT
+        </button>
       </aside>
       <main className="dashboard-main">
         {active === "add-product" && <AddProduct />}
