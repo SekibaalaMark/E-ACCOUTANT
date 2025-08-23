@@ -6,6 +6,7 @@ import AddPurchase from "./AddPurchase";
 import AddExpense from "./AddExpense";
 import ProfitReports from "./ProfitReports";
 import StockStats from "./StockStats";
+import ExpenseTable from "./ExpenseTable";
 import "./AdminDashboard.css";
 
 const AdminDashboard: React.FC = () => {
@@ -35,6 +36,9 @@ const AdminDashboard: React.FC = () => {
           <li className={active === "add-expense" ? "active" : ""} onClick={() => setActive("add-expense")}>
             Add Expense
           </li>
+          <li className={active === "expense-table" ? "active" : ""} onClick={() => setActive("expense-table")}>
+            View Expenses
+          </li>
           <li className={active === "profit-reports" ? "active" : ""} onClick={() => setActive("profit-reports")}>
             Profit Reports
           </li>
@@ -51,6 +55,7 @@ const AdminDashboard: React.FC = () => {
         {active === "add-sale" && <AddSale />}
         {active === "add-purchase" && <AddPurchase />}
         {active === "add-expense" && <AddExpense />}
+        {active === "expense-table" && <ExpenseTable />}
         {active === "profit-reports" && <ProfitReports />}
         {active === "stock-stats" && <StockStats />}
       </main>
