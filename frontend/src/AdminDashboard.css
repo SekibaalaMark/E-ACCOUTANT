@@ -288,3 +288,65 @@
     height: 50vh;
   }
 }
+
+/* Add this to your AdminDashboard.css file */
+
+.stock-stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.refresh-btn:disabled {
+  background: #cccccc !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.refresh-btn:disabled:hover {
+  background: #cccccc !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .stock-stats-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .stock-stats-header h2 {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .stock-stats-header > div {
+    justify-content: center;
+  }
+  
+  .refresh-btn {
+    flex: 1;
+    min-width: 100px;
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stock-stats-header > div {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .refresh-btn {
+    max-width: none;
+    width: 100%;
+  }
+}
