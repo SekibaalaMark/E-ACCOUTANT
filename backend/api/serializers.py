@@ -246,6 +246,11 @@ from rest_framework import serializers
 
 class MonthlySalesSerializer(serializers.Serializer):
     product = serializers.CharField(source="product__name")
-    month = serializers.DateField()
+    month = serializers.SerializerMethodField()
     total_sales = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_quantity = serializers.IntegerField()
+
+    def get_month(self, obj):
+        # Format month as "YYYY-MM"
+        return obj["month"].strftime("%Y-%m")
+

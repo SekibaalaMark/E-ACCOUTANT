@@ -374,3 +374,4 @@ class MonthlySalesReportView(APIView):
         serializer = MonthlySalesSerializer(qs, many=True)
         return Response(serializer.data)
 
+
