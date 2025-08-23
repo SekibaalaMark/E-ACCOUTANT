@@ -21,6 +21,7 @@ urlpatterns = [
     path("login/", LoginAPIView.as_view(), name="login"),
     path('profits/', ProfitReportView.as_view(), name='profit-report'),
     path('profits/csv/', ProfitReportCSVView.as_view(), name='profit-report-csv'),
+    path("monthly-sales/", MonthlySalesReportView.as_view(), name="monthly-sales-report"),
     path('', include(router.urls)),
 
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
