@@ -354,3 +354,23 @@ class ProfitReportCSVView(APIView):
             return response
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+
+from django.db.models.functions import TruncMonth
+class MonthlySalesReportView(APIView):
+    def get(self, request):
+        qs = (
+            Sale.objects
+            .annotate(month=TruncMonth("date"))
+            .values("product__name", "month")
+            .annotate(
+                total_sales=Sum("total_price"),
+                total_quantity=Sum("quantity")
+            )
+            .order_by("month", "product__name")
+        )
+        serializer = MonthlySalesSerializer(qs, many=True)
+        return Response(serializer.data)
+
