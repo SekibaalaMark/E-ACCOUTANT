@@ -239,3 +239,13 @@ class ExpenseSerializer(serializers.ModelSerializer):
         if not value.strip():
             raise serializers.ValidationError("Title cannot be empty")
         return value.strip()
+
+
+# serializers.py
+from rest_framework import serializers
+
+class MonthlySalesSerializer(serializers.Serializer):
+    product = serializers.CharField(source="product__name")
+    month = serializers.DateField()
+    total_sales = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_quantity = serializers.IntegerField()
