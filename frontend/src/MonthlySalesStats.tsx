@@ -9,8 +9,12 @@ import { Line } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const COLORS = [
-  '#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2', '#00796b', '#c2185b', '#5d4037', '#616161', '#455a64'
+  '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+  '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+  '#393b79', '#637939', '#8c6d31', '#843c39', '#7b4173',
+  '#3182bd', '#31a354', '#e6550d', '#756bb1', '#636363'
 ];
+
 
 interface MonthlySalesData {
   product: string;
