@@ -23,7 +23,7 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="dashboard-container">
       <aside className="dashboard-sidebar">
-        <h3>Admin</h3>
+        <h3>Admin Daniel Auto Parts</h3>
         <ul>
           <li className={active === "add-product" ? "active" : ""} onClick={() => setActive("add-product")}>
             Add Product
