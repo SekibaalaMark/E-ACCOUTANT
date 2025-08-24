@@ -29,6 +29,22 @@ interface Product {
   selling_price: string;
 }
 
+// Generate a palette of distinct colors
+const COLORS = [
+  '#1976d2', '#388e3c', '#fbc02d', '#d32f2f', '#7b1fa2', '#0288d1', '#c2185b',
+  '#ffa000', '#388e3c', '#f57c00', '#455a64', '#0097a7', '#8bc34a', '#f44336',
+  '#5d4037', '#cddc39', '#607d8b', '#e91e63', '#00bcd4', '#ff5722'
+];
+
+const getBarColors = (count: number) => {
+  // Repeat colors if products > COLORS.length, but always unique for first N
+  let colors = [];
+  for (let i = 0; i < count; i++) {
+    colors.push(COLORS[i % COLORS.length]);
+  }
+  return colors;
+};
+
 const StockStats: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,14 +66,16 @@ const StockStats: React.FC = () => {
     setLoading(false);
   };
 
+  const barColors = getBarColors(products.length);
+
   const chartData = {
     labels: products.map(product => `${product.name} (${product.brand})`),
     datasets: [
       {
         label: 'Stock Level',
         data: products.map(product => product.stock),
-        backgroundColor: products.map(() => 'rgba(25, 118, 210, 0.6)'),
-        borderColor: products.map(() => 'rgba(25, 118, 210, 1)'),
+        backgroundColor: barColors,
+        borderColor: barColors,
         borderWidth: 1,
       },
     ],
