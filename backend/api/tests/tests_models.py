@@ -88,3 +88,108 @@ class CustomUserModelTests(TestCase):
             role="invalid_role"   # not in ROLES
         )
         self.assertEqual(user.role, "invalid_role")  # currently allowed
+        
+        
+        
+        from django.test import TestCase
+from django.db import IntegrityError
+from decimal import Decimal
+from django.contrib.auth import get_user_model
+
+from ..models import Product, Sale   # Adjust import based on your app name
+
+User = get_user_model()
+
+
+class ProductModelTests(TestCase):
+
+    def setUp(self):
+        """Create a product and a cashier for testing"""
+        self.product = Product.objects.create(
+            name="Laptop Dell XPS",
+            brand="Dell",
+            stock=50,
+            buying_price=Decimal('800.00'),
+            selling_price=Decimal('1200.00')
+        )
+
+        self.cashier = User.objects.create_user(
+            username="cashier1",
+            email="cashier1@example.com",
+            password="testpass123",
+            role="cashier"
+        )
+
+    def test_product_creation(self):
+        """Test basic product creation and default values"""
+        self.assertEqual(self.product.name, "Laptop Dell XPS")
+        self.assertEqual(self.product.brand, "Dell")
+        self.assertEqual(self.product.stock, 50)
+        self.assertEqual(self.product.buying_price, Decimal('800.00'))
+        self.assertEqual(self.product.selling_price, Decimal('1200.00'))
+        self.assertEqual(str(self.product), "Laptop Dell XPS")
+
+    def test_total_sales_property_no_sales(self):
+        """Test total_sales when no sales exist"""
+        self.assertEqual(self.product.total_sales, Decimal('0.00'))
+
+    def test_total_sales_property_with_sales(self):
+        """Test total_sales with multiple sales"""
+        # Create some sales
+        Sale.objects.create(
+            product=self.product,
+            quantity=5,
+            total_price=Decimal('6000.00'),
+            cashier=self.cashier
+        )
+        Sale.objects.create(
+            product=self.product,
+            quantity=3,
+            total_price=Decimal('3600.00'),
+            cashier=self.cashier
+        )
+
+        expected_total = Decimal('6000.00') + Decimal('3600.00')
+        self.assertEqual(self.product.total_sales, expected_total)
+
+    def test_total_profit_property_no_sales(self):
+        """Test total_profit when no sales exist"""
+        self.assertEqual(self.product.total_profit, Decimal('0.00'))
+
+    def test_total_profit_property_with_sales(self):
+        """Test total_profit calculation"""
+        Sale.objects.create(
+            product=self.product,
+            quantity=10,
+            total_price=Decimal('12000.00'),   # 10 * 1200
+            cashier=self.cashier
+        )
+        Sale.objects.create(
+            product=self.product,
+            quantity=5,
+            total_price=Decimal('6000.00'),
+            cashier=self.cashier
+        )
+
+        # Profit per unit = 1200 - 800 = 400
+        # Total quantity sold = 15
+        expected_profit = Decimal('400.00') * 15
+        self.assertEqual(self.product.total_profit, expected_profit)
+
+    def test_total_profit_with_different_quantities(self):
+        """Test profit with mixed quantities"""
+        Sale.objects.create(product=self.product, quantity=2, total_price=Decimal('2400'), cashier=self.cashier)
+        Sale.objects.create(product=self.product, quantity=8, total_price=Decimal('9600'), cashier=self.cashier)
+
+        expected_profit = (Decimal('1200') - Decimal('800')) * 10   # 400 * 10
+        self.assertEqual(self.product.total_profit, expected_profit)
+
+    def test_stock_is_positive_big_integer(self):
+        """Test that stock cannot be negative (thanks to PositiveBigIntegerField)"""
+        with self.assertRaises(IntegrityError):
+            Product.objects.create(
+                name="Invalid Product",
+                buying_price=Decimal('100'),
+                selling_price=Decimal('150'),
+                stock=-5   # Should raise error
+            )
