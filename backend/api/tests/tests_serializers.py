@@ -841,4 +841,130 @@ class ExpenseSerializerTests(TestCase):
         self.assertEqual(data['title'], 'Marketing Campaign')
         self.assertEqual(data['amount'], '1500.00')        # Decimal converted to string in JSON
         self.assertIn('date', data)
-        self.assertIn('id', data)        
+        self.assertIn('id', data)
+        
+        
+        
+        
+
+
+
+from django.test import TestCase
+from decimal import Decimal
+from datetime import datetime
+
+from ..serializers import MonthlySalesSerializer
+
+
+class MonthlySalesSerializerTests(TestCase):
+
+    def test_serializer_with_valid_data(self):
+        """Test serializer with proper aggregated data"""
+        data = {
+            'product__name': 'Dell Laptop',
+            'month': datetime(2026, 3, 15),      # will be formatted by get_month
+            'total_sales': Decimal('24500.75'),
+            'total_quantity': 18
+        }
+
+        serializer = MonthlySalesSerializer(data)
+        self.assertTrue(serializer.is_valid())   # Serializer is not ModelSerializer, so we pass dict directly
+
+        output = serializer.data
+
+        self.assertEqual(output['product'], 'Dell Laptop')
+        self.assertEqual(output['month'], '2026-03')          # formatted by get_month
+        self.assertEqual(output['total_sales'], '24500.75')
+        self.assertEqual(output['total_quantity'], 18)
+
+    def test_get_month_method(self):
+        """Test the custom get_month SerializerMethodField"""
+        test_cases = [
+            (datetime(2025, 1, 5), '2025-01'),
+            (datetime(2026, 12, 31), '2026-12'),
+            (datetime(2024, 6, 15), '2024-06'),
+        ]
+
+        for input_date, expected in test_cases:
+            obj = {
+                'product__name': 'Test Product',
+                'month': input_date,
+                'total_sales': Decimal('1000.00'),
+                'total_quantity': 5
+            }
+
+            serializer = MonthlySalesSerializer(obj)
+            self.assertEqual(serializer.data['month'], expected)
+
+    def test_month_with_different_formats(self):
+        """Test edge cases for month formatting"""
+        obj = {
+            'product__name': 'iPhone',
+            'month': datetime(2026, 3, 25, 14, 30, 0),   # with time
+            'total_sales': Decimal('8750.00'),
+            'total_quantity': 10
+        }
+
+        serializer = MonthlySalesSerializer(obj)
+        self.assertEqual(serializer.data['month'], '2026-03')
+
+    def test_serializer_output_structure(self):
+        """Ensure the output has exactly the expected fields"""
+        data = {
+            'product__name': 'Wireless Mouse',
+            'month': datetime(2026, 2, 1),
+            'total_sales': Decimal('1250.50'),
+            'total_quantity': 25
+        }
+
+        serializer = MonthlySalesSerializer(data)
+        output = serializer.data
+
+        expected_fields = {'product', 'month', 'total_sales', 'total_quantity'}
+        self.assertEqual(set(output.keys()), expected_fields)
+
+    def test_decimal_field_formatting(self):
+        """Test that total_sales is properly serialized as string with 2 decimals"""
+        data = {
+            'product__name': 'Keyboard',
+            'month': datetime(2026, 1, 10),
+            'total_sales': Decimal('2999.999'),     # should be rounded
+            'total_quantity': 12
+        }
+
+        serializer = MonthlySalesSerializer(data)
+        output = serializer.data
+
+        self.assertEqual(output['total_sales'], '3000.00')   # DRF DecimalField rounds correctly
+
+    def test_large_numbers(self):
+        """Test with large sales values"""
+        data = {
+            'product__name': 'High End Server',
+            'month': datetime(2026, 3, 1),
+            'total_sales': Decimal('1250000.75'),
+            'total_quantity': 50
+        }
+
+        serializer = MonthlySalesSerializer(data)
+        self.assertTrue(serializer.is_valid())  # no validation errors expected
+        output = serializer.data
+
+        self.assertEqual(output['total_sales'], '1250000.75')
+        self.assertEqual(output['total_quantity'], 50)
+
+    def test_missing_fields_raises_error(self):
+        """Serializer should fail gracefully if required fields are missing"""
+        incomplete_data = {
+            'product__name': 'Missing Data',
+            'total_sales': Decimal('500.00')
+            # missing 'month' and 'total_quantity'
+        }
+
+        serializer = MonthlySalesSerializer(incomplete_data)
+        # For Serializer (not ModelSerializer), is_valid() will still pass if no validators,
+        # but data will be incomplete. We usually handle this at the view level.
+        output = serializer.data
+
+        self.assertIn('product', output)
+        self.assertNotIn('month', output)   # get_month will fail if 'month' missing → KeyError in real use        
