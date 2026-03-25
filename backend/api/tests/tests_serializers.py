@@ -504,4 +504,204 @@ class SaleSerializer(serializers.ModelSerializer):
         instance.save()  # Triggers model's save method for total_price and stock updates
         return instance
     
-        
+
+
+
+
+
+from django.test import TestCase
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from decimal import Decimal
+
+from ..serializers import PurchaseSerializer
+from ..models import Product, Purchase
+
+
+class PurchaseSerializerTests(TestCase):
+
+    def setUp(self):
+        self.product = Product.objects.create(
+            name="Test Smartphone",
+            brand="Samsung",
+            stock=100,
+            buying_price=Decimal('650.00'),
+            selling_price=Decimal('950.00')
+        )
+
+        self.product2 = Product.objects.create(
+            name="Second Product",
+            brand="Xiaomi",
+            stock=50,
+            buying_price=Decimal('300.00'),
+            selling_price=Decimal('450.00')
+        )
+
+    # ====================== Basic Validation Tests ======================
+
+    def test_valid_purchase_data(self):
+        """Valid data should pass all validations"""
+        data = {
+            'product': self.product.id,
+            'quantity': 25,
+        }
+
+        serializer = PurchaseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        validated = serializer.validated_data
+        self.assertEqual(validated['product'], self.product)
+        self.assertEqual(validated['quantity'], 25)
+
+    def test_quantity_must_be_positive(self):
+        """Test custom validate_quantity method"""
+        data = {
+            'product': self.product.id,
+            'quantity': 0,
+        }
+        serializer = PurchaseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('quantity', serializer.errors)
+        self.assertEqual(serializer.errors['quantity'][0], "Quantity must be positive")
+
+        data['quantity'] = -10
+        serializer = PurchaseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+
+    def test_product_must_have_valid_buying_price(self):
+        """Test validate_product method"""
+        bad_product = Product.objects.create(
+            name="Bad Product",
+            brand="Test",
+            stock=10,
+            buying_price=Decimal('-50.00'),   # negative buying price
+            selling_price=Decimal('100.00')
+        )
+
+        data = {
+            'product': bad_product.id,
+            'quantity': 5,
+        }
+
+        serializer = PurchaseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('product', serializer.errors)
+        self.assertEqual(serializer.errors['product'][0], "Product buying price cannot be negative")
+
+    def test_projected_stock_max_limit_on_create(self):
+        """Test maximum stock limit validation on new purchase"""
+        self.product.stock = 999_990
+        self.product.save()
+
+        data = {
+            'product': self.product.id,
+            'quantity': 20,          # would make stock 1,000,010 > 1_000_000
+        }
+
+        serializer = PurchaseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
+        self.assertIn("exceed maximum limit of 1,000,000", serializer.errors['non_field_errors'][0])
+
+    # ====================== Creation Tests ======================
+
+    def test_create_purchase_calculates_total_cost_and_increases_stock(self):
+        """Serializer create should trigger model's save() logic"""
+        initial_stock = self.product.stock
+
+        data = {
+            'product': self.product.id,
+            'quantity': 40,
+        }
+
+        serializer = PurchaseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        purchase = serializer.save()
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(purchase.quantity, 40)
+        self.assertEqual(purchase.total_cost, Decimal('26000.00'))   # 650 * 40
+        self.assertEqual(self.product.stock, initial_stock + 40)
+
+    # ====================== Update Tests ======================
+
+    def test_update_quantity_increases_stock(self):
+        """Increasing quantity should increase stock"""
+        purchase = Purchase.objects.create(product=self.product, quantity=10)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 110)
+
+        update_data = {'quantity': 35}
+
+        serializer = PurchaseSerializer(instance=purchase, data=update_data, partial=True)
+        self.assertTrue(serializer.is_valid())
+
+        updated_purchase = serializer.save()
+        self.product.refresh_from_db()
+
+        self.assertEqual(updated_purchase.quantity, 35)
+        self.assertEqual(updated_purchase.total_cost, Decimal('22750.00'))
+        self.assertEqual(self.product.stock, 135)   # 100 + 35 = 135
+
+    def test_update_quantity_decreases_stock(self):
+        """Decreasing quantity should reduce stock"""
+        purchase = Purchase.objects.create(product=self.product, quantity=60)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 160)
+
+        update_data = {'quantity': 20}
+
+        serializer = PurchaseSerializer(instance=purchase, data=update_data, partial=True)
+        self.assertTrue(serializer.is_valid())
+        serializer.save()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 120)   # 100 + 20 = 120
+
+    def test_changing_product_on_update(self):
+        """Changing product should adjust stock on both products"""
+        purchase = Purchase.objects.create(product=self.product, quantity=30)  # stock1 = 130
+
+        update_data = {
+            'product': self.product2.id,
+            'quantity': 15
+        }
+
+        serializer = PurchaseSerializer(instance=purchase, data=update_data)
+        self.assertTrue(serializer.is_valid())
+
+        serializer.save()
+
+        self.product.refresh_from_db()
+        self.product2.refresh_from_db()
+
+        self.assertEqual(self.product.stock, 100)      # reverted 30
+        self.assertEqual(self.product2.stock, 65)      # 50 + 15 = 65
+
+    def test_update_respects_max_stock_limit(self):
+        """Update should also respect max stock limit"""
+        self.product.stock = 999_980
+        self.product.save()
+
+        purchase = Purchase.objects.create(product=self.product, quantity=5)
+
+        update_data = {'quantity': 50}   # would exceed limit
+
+        serializer = PurchaseSerializer(instance=purchase, data=update_data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("exceed maximum limit", str(serializer.errors))
+
+    # ====================== Read-only & Extra Fields ======================
+
+    def test_extra_read_only_fields(self):
+        """product_name and product_buying_price should appear in output"""
+        purchase = Purchase.objects.create(product=self.product, quantity=10)
+
+        serializer = PurchaseSerializer(purchase)
+        data = serializer.data
+
+        self.assertEqual(data['product_name'], "Test Smartphone")
+        self.assertEqual(data['product_buying_price'], "650.00")
+        self.assertIn('total_cost', data)
+        self.assertIn('date', data)        
