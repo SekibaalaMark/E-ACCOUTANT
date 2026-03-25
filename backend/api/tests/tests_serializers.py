@@ -704,4 +704,141 @@ class PurchaseSerializerTests(TestCase):
         self.assertEqual(data['product_name'], "Test Smartphone")
         self.assertEqual(data['product_buying_price'], "650.00")
         self.assertIn('total_cost', data)
-        self.assertIn('date', data)        
+        self.assertIn('date', data)
+        
+        
+        
+        
+        
+
+
+from django.test import TestCase
+from decimal import Decimal
+
+from ..serializers import ExpenseSerializer
+from ..models import Expense
+
+
+class ExpenseSerializerTests(TestCase):
+
+    def test_valid_expense_data(self):
+        """Test serializer with valid data"""
+        data = {
+            'title': 'Office Rent',
+            'amount': Decimal('2500.50')
+        }
+
+        serializer = ExpenseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        validated_data = serializer.validated_data
+        self.assertEqual(validated_data['title'], 'Office Rent')
+        self.assertEqual(validated_data['amount'], Decimal('2500.50'))
+
+    def test_amount_must_be_positive(self):
+        """Test validate_amount method"""
+        # Zero amount
+        data = {
+            'title': 'Free Expense',
+            'amount': Decimal('0.00')
+        }
+        serializer = ExpenseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('amount', serializer.errors)
+        self.assertEqual(serializer.errors['amount'][0], "Amount must be positive")
+
+        # Negative amount
+        data['amount'] = Decimal('-150.75')
+        serializer = ExpenseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+
+    def test_title_cannot_be_empty_or_whitespace(self):
+        """Test validate_title method"""
+        # Empty string
+        data = {
+            'title': '',
+            'amount': Decimal('100.00')
+        }
+        serializer = ExpenseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('title', serializer.errors)
+        self.assertEqual(serializer.errors['title'][0], "Title cannot be empty")
+
+        # Only whitespace
+        data['title'] = '   '
+        serializer = ExpenseSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+
+    def test_title_is_stripped(self):
+        """validate_title should strip whitespace"""
+        data = {
+            'title': '   Monthly Internet Bill   ',
+            'amount': Decimal('85.00')
+        }
+
+        serializer = ExpenseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data['title'], 'Monthly Internet Bill')
+
+    def test_date_is_read_only(self):
+        """date should be read-only and ignored on input"""
+        data = {
+            'title': 'Test Expense',
+            'amount': Decimal('500.00'),
+            'date': '2026-01-01T10:00:00Z'   # trying to set date
+        }
+
+        serializer = ExpenseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertNotIn('date', serializer.validated_data)
+
+    def test_create_expense(self):
+        """Serializer should successfully create an expense"""
+        data = {
+            'title': 'Electricity Bill',
+            'amount': Decimal('125.75')
+        }
+
+        serializer = ExpenseSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        expense = serializer.save()
+
+        self.assertEqual(expense.title, 'Electricity Bill')
+        self.assertEqual(expense.amount, Decimal('125.75'))
+        self.assertIsNotNone(expense.date)
+
+    def test_update_expense(self):
+        """Test updating an existing expense"""
+        expense = Expense.objects.create(
+            title="Old Title",
+            amount=Decimal('100.00')
+        )
+
+        update_data = {
+            'title': 'Updated Title',
+            'amount': Decimal('250.00')
+        }
+
+        serializer = ExpenseSerializer(instance=expense, data=update_data, partial=True)
+        self.assertTrue(serializer.is_valid())
+
+        updated_expense = serializer.save()
+
+        self.assertEqual(updated_expense.title, 'Updated Title')
+        self.assertEqual(updated_expense.amount, Decimal('250.00'))
+
+    def test_serializer_output_includes_all_fields(self):
+        """Test the serialized output format"""
+        expense = Expense.objects.create(
+            title="Marketing Campaign",
+            amount=Decimal('1500.00')
+        )
+
+        serializer = ExpenseSerializer(expense)
+        data = serializer.data
+
+        self.assertEqual(data['title'], 'Marketing Campaign')
+        self.assertEqual(data['amount'], '1500.00')        # Decimal converted to string in JSON
+        self.assertIn('date', data)
+        self.assertIn('id', data)        
