@@ -323,3 +323,162 @@ class SaleModelTests(TestCase):
 
         self.assertEqual(self.product.total_sales, Decimal('9600.00'))
         self.assertEqual(self.product.total_profit, Decimal('2000.00'))  # (1200-800) * 8
+        
+        
+        
+
+
+from django.test import TestCase
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+from django.contrib.auth import get_user_model
+
+from ..models import Product, Purchase
+
+User = get_user_model()
+
+
+class PurchaseModelTests(TestCase):
+
+    def setUp(self):
+        self.product = Product.objects.create(
+            name="Test Smartphone",
+            brand="Samsung",
+            stock=50,
+            buying_price=Decimal('650.00'),
+            selling_price=Decimal('950.00')
+        )
+
+    # ==================== Basic Creation Tests ====================
+
+    def test_create_purchase_calculates_total_cost_and_increases_stock(self):
+        """New purchase should calculate total_cost and add to stock"""
+        initial_stock = self.product.stock
+
+        purchase = Purchase.objects.create(
+            product=self.product,
+            quantity=30
+        )
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(purchase.total_cost, Decimal('19500.00'))   # 650 * 30
+        self.assertEqual(self.product.stock, initial_stock + 30)
+        self.assertEqual(str(purchase), f"Purchase of 30 Test Smartphone on {purchase.date}")
+
+    def test_quantity_must_be_positive(self):
+        """Quantity <= 0 should raise ValidationError"""
+        with self.assertRaises(ValidationError) as cm:
+            Purchase.objects.create(product=self.product, quantity=0)
+
+        self.assertIn("Quantity must be positive", str(cm.exception))
+
+        with self.assertRaises(ValidationError):
+            Purchase.objects.create(product=self.product, quantity=-5)
+
+    def test_buying_price_cannot_be_negative(self):
+        """Product with negative buying_price should raise error"""
+        negative_product = Product.objects.create(
+            name="Bad Product",
+            buying_price=Decimal('-10.00'),
+            selling_price=Decimal('100.00'),
+            stock=10
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            Purchase.objects.create(product=negative_product, quantity=5)
+
+        self.assertIn("Product buying price cannot be negative", str(cm.exception))
+
+    # ==================== Stock Update Tests ====================
+
+    def test_update_purchase_increase_quantity(self):
+        """Increasing quantity should increase stock accordingly"""
+        purchase = Purchase.objects.create(product=self.product, quantity=10)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 60)
+
+        purchase.quantity = 25
+        purchase.save()
+
+        self.product.refresh_from_db()
+        purchase.refresh_from_db()
+
+        self.assertEqual(purchase.quantity, 25)
+        self.assertEqual(purchase.total_cost, Decimal('16250.00'))   # 650 * 25
+        self.assertEqual(self.product.stock, 75)                     # 50 + 25 = 75
+
+    def test_update_purchase_decrease_quantity(self):
+        """Decreasing quantity should decrease stock"""
+        purchase = Purchase.objects.create(product=self.product, quantity=40)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 90)
+
+        purchase.quantity = 15
+        purchase.save()
+
+        self.product.refresh_from_db()
+        purchase.refresh_from_db()
+
+        self.assertEqual(purchase.quantity, 15)
+        self.assertEqual(self.product.stock, 65)   # 50 + 15 = 65
+
+    def test_changing_product_on_update(self):
+        """Changing product during update should adjust both products' stock"""
+        product2 = Product.objects.create(
+            name="Another Phone",
+            brand="iPhone",
+            stock=100,
+            buying_price=Decimal('900.00'),
+            selling_price=Decimal('1300.00')
+        )
+
+        purchase = Purchase.objects.create(product=self.product, quantity=20)  # +20 to first product
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 70)
+
+        # Change to product2
+        purchase.product = product2
+        purchase.quantity = 35
+        purchase.save()
+
+        self.product.refresh_from_db()
+        product2.refresh_from_db()
+        purchase.refresh_from_db()
+
+        self.assertEqual(self.product.stock, 50)           # reverted the 20
+        self.assertEqual(product2.stock, 100 + 35)         # 135
+        self.assertEqual(purchase.product, product2)
+
+    def test_stock_cannot_go_negative_on_update(self):
+        """Stock should not go below 0 when decreasing quantity"""
+        purchase = Purchase.objects.create(product=self.product, quantity=60)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 110)
+
+        purchase.quantity = 200   # way more than current stock allows after revert
+
+        with self.assertRaises(ValidationError) as cm:
+            purchase.save()
+
+        self.assertIn("insufficient stock", str(cm.exception).lower())
+
+    def test_maximum_stock_limit(self):
+        """Stock cannot exceed 1,000,000"""
+        self.product.stock = 999_990
+        self.product.save()
+
+        with self.assertRaises(ValidationError) as cm:
+            Purchase.objects.create(product=self.product, quantity=20)
+
+        self.assertIn("exceeds maximum limit", str(cm.exception))
+
+    # ==================== Edge Cases ====================
+
+    def test_total_cost_is_always_calculated_correctly(self):
+        """total_cost should always be buying_price * quantity"""
+        for qty in [1, 10, 100, 999]:
+            purchase = Purchase.objects.create(product=self.product, quantity=qty)
+            expected = self.product.buying_price * qty
+            self.assertEqual(purchase.total_cost, expected)
+            purchase.delete()  # cleanup
