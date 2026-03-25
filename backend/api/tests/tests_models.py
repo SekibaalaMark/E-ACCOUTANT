@@ -482,3 +482,25 @@ class PurchaseModelTests(TestCase):
             expected = self.product.buying_price * qty
             self.assertEqual(purchase.total_cost, expected)
             purchase.delete()  # cleanup
+            
+            
+            
+
+
+from django.core.validators import MinValueValidator
+from django.db.models import Sum
+
+class Expense(models.Model):
+    title = models.CharField(max_length=100)
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]   # prevent 0 or negative
+    )
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.amount}"
+
+    class Meta:
+        ordering = ['-date']
