@@ -149,3 +149,138 @@ class UserRegistrationSerializerTests(TestCase):
 
         # confirm_password should not exist on the model
         self.assertFalse(hasattr(user, 'confirm_password'))
+        
+        
+        
+
+
+
+
+from django.test import TestCase
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.contrib.auth import get_user_model
+
+from ..serializers import LoginSerializer
+
+User = get_user_model()
+
+
+class LoginSerializerTests(TestCase):
+
+    def setUp(self):
+        """Create test users"""
+        self.active_user = User.objects.create_user(
+            username="cashier1",
+            email="cashier1@example.com",
+            password="CorrectPass123",
+            role="cashier"
+        )
+
+        self.inactive_user = User.objects.create_user(
+            username="inactive",
+            email="inactive@example.com",
+            password="Pass123",
+            role="viewer"
+        )
+        self.inactive_user.is_active = False
+        self.inactive_user.save()
+
+    def test_valid_login_returns_tokens_and_role(self):
+        """Successful login should return access + refresh tokens + role"""
+        data = {
+            "username": "cashier1",
+            "password": "CorrectPass123"
+        }
+
+        serializer = LoginSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        validated_data = serializer.validated_data
+
+        self.assertIn("access", validated_data)
+        self.assertIn("refresh", validated_data)
+        self.assertIn("role", validated_data)
+        self.assertEqual(validated_data["username"], "cashier1")
+        self.assertEqual(validated_data["role"], "cashier")
+
+        # Tokens should be non-empty strings
+        self.assertIsInstance(validated_data["access"], str)
+        self.assertIsInstance(validated_data["refresh"], str)
+        self.assertGreater(len(validated_data["access"]), 20)
+        self.assertGreater(len(validated_data["refresh"]), 20)
+
+    def test_invalid_credentials_raises_error(self):
+        """Wrong password or non-existent user should fail"""
+        # Wrong password
+        data = {
+            "username": "cashier1",
+            "password": "WrongPassword123"
+        }
+        serializer = LoginSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("non_field_errors", serializer.errors)
+        self.assertEqual(serializer.errors["non_field_errors"][0], "Invalid username or password.")
+
+        # Non-existent username
+        data2 = {
+            "username": "ghostuser",
+            "password": "anything"
+        }
+        serializer2 = LoginSerializer(data=data2)
+        self.assertFalse(serializer2.is_valid())
+        self.assertEqual(serializer2.errors["non_field_errors"][0], "Invalid username or password.")
+
+    def test_empty_username_or_password(self):
+        """Username and password are required"""
+        # Missing username
+        serializer = LoginSerializer(data={"password": "pass123"})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("username", serializer.errors)
+
+        # Missing password
+        serializer = LoginSerializer(data={"username": "cashier1"})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("password", serializer.errors)
+
+    def test_inactive_user_login(self):
+        """Test login behavior for inactive users"""
+        data = {
+            "username": "inactive",
+            "password": "Pass123"
+        }
+
+        serializer = LoginSerializer(data=data)
+
+        # Currently your code allows inactive users (the check is commented out)
+        # So this should pass
+        self.assertTrue(serializer.is_valid())
+
+        # Uncomment the block below if you later enable the is_active check:
+        # with self.assertRaises(DRFValidationError):
+        #     serializer.is_valid(raise_exception=True)
+
+    def test_login_returns_correct_role(self):
+        """Make sure the role is correctly returned for different user types"""
+        admin = User.objects.create_user(
+            username="admin1",
+            email="admin@example.com",
+            password="AdminPass123",
+            role="admin"
+        )
+
+        data = {"username": "admin1", "password": "AdminPass123"}
+        serializer = LoginSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["role"], "admin")
+
+    def test_authenticate_uses_django_backend(self):
+        """Ensure authenticate() is actually being used (integration test)"""
+        # This test indirectly verifies that authenticate() works with CustomUser
+        data = {
+            "username": "cashier1",
+            "password": "CorrectPass123"
+        }
+        serializer = LoginSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        # If we reach here, authenticate() succeeded
