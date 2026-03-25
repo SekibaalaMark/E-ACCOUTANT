@@ -19,6 +19,7 @@ class CustomUser(AbstractUser):
         return f"{self.username} ({self.role})"
 
 
+
 class Product(models.Model):
     name = models.CharField(max_length=100)
     brand = models.CharField(max_length=100, blank=True)
