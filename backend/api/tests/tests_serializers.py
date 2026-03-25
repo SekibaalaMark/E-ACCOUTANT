@@ -284,3 +284,186 @@ class LoginSerializerTests(TestCase):
         self.assertTrue(serializer.is_valid())
 
         # If we reach here, authenticate() succeeded
+        
+        
+
+
+
+
+
+
+
+from django.test import TestCase
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from decimal import Decimal
+
+from ..serializers import ProductSerializer
+from ..models import Product
+
+
+class ProductSerializerTests(TestCase):
+
+    def test_valid_product_data(self):
+        """Test serializer with completely valid data"""
+        data = {
+            'name': 'Dell XPS 15',
+            'brand': 'Dell',
+            'stock': 25,
+            'buying_price': Decimal('850.00'),
+            'selling_price': Decimal('1250.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+
+        validated_data = serializer.validated_data
+        self.assertEqual(validated_data['name'], 'Dell XPS 15')
+        self.assertEqual(validated_data['brand'], 'Dell')
+        self.assertEqual(validated_data['stock'], 25)
+        self.assertEqual(validated_data['buying_price'], Decimal('850.00'))
+        self.assertEqual(validated_data['selling_price'], Decimal('1250.00'))
+
+    def test_name_cannot_be_empty_or_whitespace(self):
+        """Test custom validation: name cannot be empty"""
+        data = {
+            'name': '   ',                    # only whitespace
+            'brand': 'HP',
+            'stock': 10,
+            'buying_price': Decimal('500.00'),
+            'selling_price': Decimal('700.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('name', serializer.errors)
+        self.assertEqual(serializer.errors['name'][0], "Product name cannot be empty.")
+
+    def test_buying_price_cannot_be_negative(self):
+        """Test buying_price validation"""
+        data = {
+            'name': 'Invalid Product',
+            'brand': 'Test',
+            'stock': 5,
+            'buying_price': Decimal('-10.00'),
+            'selling_price': Decimal('100.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('buying_price', serializer.errors)
+        self.assertEqual(serializer.errors['buying_price'][0], "Buying price cannot be negative.")
+
+    def test_selling_price_cannot_be_negative(self):
+        """Test selling_price validation"""
+        data = {
+            'name': 'Invalid Product',
+            'brand': 'Test',
+            'stock': 5,
+            'buying_price': Decimal('100.00'),
+            'selling_price': Decimal('-50.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('selling_price', serializer.errors)
+
+    def test_selling_price_must_be_greater_or_equal_to_buying_price(self):
+        """Business rule: selling price >= buying price"""
+        data = {
+            'name': 'Loss Making Product',
+            'brand': 'Test',
+            'stock': 10,
+            'buying_price': Decimal('1000.00'),
+            'selling_price': Decimal('900.00')      # selling < buying
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('selling_price', serializer.errors)
+        self.assertEqual(
+            serializer.errors['selling_price'][0],
+            "Selling price should not be less than buying price."
+        )
+
+    def test_stock_cannot_be_negative(self):
+        """Test stock validation (even though model prevents it)"""
+        data = {
+            'name': 'Negative Stock',
+            'brand': 'Test',
+            'stock': -5,
+            'buying_price': Decimal('200.00'),
+            'selling_price': Decimal('300.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('stock', serializer.errors)
+
+    def test_brand_is_required(self):
+        """brand is marked as required in extra_kwargs"""
+        data = {
+            'name': 'No Brand Product',
+            'stock': 10,
+            'buying_price': Decimal('100.00'),
+            'selling_price': Decimal('150.00')
+            # brand intentionally omitted
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('brand', serializer.errors)
+
+    def test_stock_is_required(self):
+        """stock is marked as required in extra_kwargs"""
+        data = {
+            'name': 'No Stock Info',
+            'brand': 'Test',
+            'buying_price': Decimal('100.00'),
+            'selling_price': Decimal('150.00')
+            # stock intentionally omitted
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('stock', serializer.errors)
+
+    def test_id_is_read_only(self):
+        """id should be read-only and ignored on create/update"""
+        data = {
+            'id': 999,                          # trying to set id
+            'name': 'Test Product',
+            'brand': 'Test',
+            'stock': 10,
+            'buying_price': Decimal('100.00'),
+            'selling_price': Decimal('150.00')
+        }
+
+        serializer = ProductSerializer(data=data)
+        self.assertTrue(serializer.is_valid())   # should still be valid
+        self.assertNotIn('id', serializer.validated_data)  # id should be stripped
+
+    def test_serializer_can_update_existing_product(self):
+        """Test that serializer works correctly on update"""
+        product = Product.objects.create(
+            name="Old Laptop",
+            brand="HP",
+            stock=15,
+            buying_price=Decimal('700.00'),
+            selling_price=Decimal('900.00')
+        )
+
+        update_data = {
+            'name': 'Updated Laptop',
+            'brand': 'Dell',
+            'stock': 30,
+            'buying_price': Decimal('800.00'),
+            'selling_price': Decimal('1100.00')
+        }
+
+        serializer = ProductSerializer(instance=product, data=update_data)
+        self.assertTrue(serializer.is_valid())
+        updated_product = serializer.save()
+
+        self.assertEqual(updated_product.name, 'Updated Laptop')
+        self.assertEqual(updated_product.stock, 30)
+        self.assertEqual(updated_product.selling_price, Decimal('1100.00'))
