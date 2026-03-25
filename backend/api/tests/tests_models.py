@@ -193,3 +193,133 @@ class ProductModelTests(TestCase):
                 selling_price=Decimal('150'),
                 stock=-5   # Should raise error
             )
+            
+            
+            
+            
+
+
+from django.test import TestCase, TransactionTestCase
+from django.db import IntegrityError, transaction
+from decimal import Decimal
+from django.contrib.auth import get_user_model
+
+from ..models import Product, Sale, CustomUser   # adjust import if needed
+
+User = get_user_model()
+
+
+class SaleModelTests(TestCase):
+
+    def setUp(self):
+        self.product = Product.objects.create(
+            name="Test Laptop",
+            brand="Dell",
+            stock=20,
+            buying_price=Decimal('800.00'),
+            selling_price=Decimal('1200.00')
+        )
+
+        self.cashier = User.objects.create_user(
+            username="cashier_test",
+            email="cashier@test.com",
+            password="pass123",
+            role="cashier"
+        )
+
+    def test_create_sale_calculates_total_price_and_reduces_stock(self):
+        """New sale: total_price should be auto-calculated and stock reduced"""
+        initial_stock = self.product.stock
+
+        sale = Sale.objects.create(
+            product=self.product,
+            quantity=5,
+            cashier=self.cashier   # assuming you added cashier FK - if not, remove this line
+        )
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(sale.total_price, Decimal('6000.00'))        # 1200 * 5
+        self.assertEqual(self.product.stock, initial_stock - 5)
+        self.assertEqual(sale.quantity, 5)
+
+    def test_quantity_must_be_positive(self):
+        """Sale with quantity <= 0 should raise ValueError"""
+        with self.assertRaises(ValueError) as cm:
+            Sale.objects.create(
+                product=self.product,
+                quantity=0,
+                cashier=self.cashier
+            )
+        self.assertIn("Quantity must be positive", str(cm.exception))
+
+        with self.assertRaises(ValueError):
+            Sale.objects.create(
+                product=self.product,
+                quantity=-3,
+                cashier=self.cashier
+            )
+
+    def test_insufficient_stock_raises_error(self):
+        """Cannot sell more than available stock"""
+        with self.assertRaises(ValueError) as cm:
+            Sale.objects.create(
+                product=self.product,
+                quantity=25,          # only 20 in stock
+                cashier=self.cashier
+            )
+        self.assertIn("Insufficient stock", str(cm.exception))
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 20)   # stock unchanged
+
+    def test_update_sale_increase_quantity(self):
+        """Increasing quantity on existing sale reduces stock further"""
+        sale = Sale.objects.create(
+            product=self.product,
+            quantity=3,
+            cashier=self.cashier
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 17)
+
+        # Update quantity
+        sale.quantity = 8
+        sale.save()                     # triggers custom logic
+
+        self.product.refresh_from_db()
+        sale.refresh_from_db()
+
+        self.assertEqual(sale.quantity, 8)
+        self.assertEqual(sale.total_price, Decimal('9600.00'))   # 1200*8
+        self.assertEqual(self.product.stock, 12)                 # 20 - 8 = 12
+
+    def test_update_sale_decrease_quantity(self):
+        """Decreasing quantity returns stock"""
+        sale = Sale.objects.create(
+            product=self.product,
+            quantity=10,
+            cashier=self.cashier
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 10)
+
+        sale.quantity = 4
+        sale.save()
+
+        self.product.refresh_from_db()
+        sale.refresh_from_db()
+
+        self.assertEqual(sale.quantity, 4)
+        self.assertEqual(sale.total_price, Decimal('4800.00'))
+        self.assertEqual(self.product.stock, 16)   # 20 - 4 = 16
+
+    def test_total_sales_and_total_profit_on_product_after_sale(self):
+        """Check that Product properties reflect the sale"""
+        Sale.objects.create(product=self.product, quantity=5, cashier=self.cashier)
+        Sale.objects.create(product=self.product, quantity=3, cashier=self.cashier)
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(self.product.total_sales, Decimal('9600.00'))
+        self.assertEqual(self.product.total_profit, Decimal('2000.00'))  # (1200-800) * 8
