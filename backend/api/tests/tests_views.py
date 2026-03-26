@@ -102,4 +102,68 @@ class LoginTests(APITestCase):
         }
         response = self.client.post(self.url, data, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from .models import Product
+
+class ProductViewSetTests(APITestCase):
+    def setUp(self):
+        # Create an initial product for retrieval, update, and delete tests
+        self.product = Product.objects.create(
+            name="Gaming Mouse",
+            description="High precision sensor",
+            price=59.99,
+            stock=10
+        )
+        # URLs for ViewSets usually follow this pattern:
+        self.list_url = reverse('product-list') # Matches 'product-list'
+        self.detail_url = reverse('product-detail', kwargs={'pk': self.product.pk})
+
+    def test_list_products(self):
+        """Test GET /products/ returns a list."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], self.product.name)
+
+    def test_create_product(self):
+        """Test POST /products/ creates a new record."""
+        data = {
+            "name": "Mechanical Keyboard",
+            "description": "RGB Backlit",
+            "price": 120.00,
+            "stock": 5
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Product.objects.count(), 2)
+
+    def test_retrieve_product(self):
+        """Test GET /products/{id}/ returns a single record."""
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], "Gaming Mouse")
+
+    def test_update_product(self):
+        """Test PUT /products/{id}/ updates the record."""
+        data = {"name": "Updated Mouse Name", "price": 65.00, "stock": 8, "description": "New description"}
+        response = self.client.put(self.detail_url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.name, "Updated Mouse Name")
+
+    def test_delete_product(self):
+        """Test DELETE /products/{id}/ removes the record."""
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Product.objects.count(), 0)                
