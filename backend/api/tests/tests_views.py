@@ -290,4 +290,71 @@ class PurchaseViewSetTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         purchase.refresh_from_db()
-        self.assertEqual(purchase.quantity, 20)                
+        self.assertEqual(purchase.quantity, 20)
+        
+        
+        
+        
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from .models import Expense
+
+class ExpenseViewSetTests(APITestCase):
+    def setUp(self):
+        # Create an initial expense for retrieval and update tests
+        self.expense = Expense.objects.create(
+            title="Monthly Rent",
+            amount=1200.00,
+            category="Utilities",
+            description="Office rent for March"
+        )
+        self.list_url = reverse('expense-list')
+        self.detail_url = reverse('expense-detail', kwargs={'pk': self.expense.pk})
+
+    def test_create_expense(self):
+        """Test POST /expenses/ creates a new expense record."""
+        data = {
+            "title": "Internet Bill",
+            "amount": 85.50,
+            "category": "Utilities"
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Expense.objects.count(), 2)
+        self.assertEqual(Expense.objects.latest('id').title, "Internet Bill")
+
+    def test_update_expense_amount(self):
+        """Test PUT /expenses/{id}/ updates the amount correctly."""
+        data = {
+            "title": "Monthly Rent",
+            "amount": 1300.00, # Rent increased
+            "category": "Utilities"
+        }
+        response = self.client.put(self.detail_url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.expense.refresh_from_db()
+        self.assertEqual(self.expense.amount, 1300.00)
+
+    def test_delete_expense(self):
+        """Test DELETE /expenses/{id}/ removes the record."""
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Expense.objects.count(), 0)
+
+    def test_create_invalid_expense(self):
+        """Test that invalid data (negative amount) is rejected."""
+        data = {
+            "title": "Invalid Expense",
+            "amount": -50.00, # Assuming your model/serializer validates this
+            "category": "Misc"
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        
+        # This will test your explicit ValidationError raise in perform_create
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)                
