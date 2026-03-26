@@ -45,3 +45,61 @@ class UserRegistrationTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('username', response.data) # DRF serializers usually return the error field
+        
+        
+        
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class LoginTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('login')  # Ensure this matches your path name
+        self.password = "secure_password_123"
+        self.user = User.objects.create_user(
+            username="testlogin",
+            email="login@example.com",
+            password=self.password,
+            role="admin" # Assuming your custom user model has 'role'
+        )
+
+    def test_login_success(self):
+        """Test login returns tokens and user info with correct credentials."""
+        data = {
+            "username": "testlogin",
+            "password": self.password
+        }
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify tokens exist in the response
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+        # Verify user data matches
+        self.assertEqual(response.data['user']['username'], self.user.username)
+        self.assertEqual(response.data['user']['role'], "admin")
+
+    def test_login_invalid_password(self):
+        """Test that wrong password returns 400 (or 401 depending on serializer)."""
+        data = {
+            "username": "testlogin",
+            "password": "wrong_password"
+        }
+        response = self.client.post(self.url, data, format='json')
+
+        # Since you used raise_exception=True, this will likely be 400 or 401
+        self.assertNotEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('access', response.data)
+
+    def test_login_nonexistent_user(self):
+        """Test login with a username that doesn't exist."""
+        data = {
+            "username": "ghost_user",
+            "password": "some_password"
+        }
+        response = self.client.post(self.url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)        
