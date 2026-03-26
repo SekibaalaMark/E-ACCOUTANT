@@ -357,4 +357,61 @@ class ExpenseViewSetTests(APITestCase):
         response = self.client.post(self.list_url, data, format='json')
         
         # This will test your explicit ValidationError raise in perform_create
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)                
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+
+
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from unittest.mock import patch
+
+class FinancialReportsTests(APITestCase):
+    def setUp(self):
+        # We use a static name here; ensure this matches your router registration
+        self.base_url_name = 'financial-reports' 
+
+    def test_weekly_report_params(self):
+        """Test that query parameters are correctly passed to the report."""
+        url = reverse(f'{self.base_url_name}-weekly-report')
+        
+        # We 'mock' the service so we don't need real DB data for this specific test
+        with patch('your_app.services.FinancialService.generate_financial_report') as mocked_service:
+            mocked_service.return_value = {"total_sales": 500}
+            
+            response = self.client.get(url, {'week': 30, 'year': 2024})
+            
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertTrue(response.data['success'])
+            # Verify the service was called with the converted integers
+            mocked_service.assert_called_once_with('weekly', year=2024, week=30)
+
+    def test_monthly_report_error_handling(self):
+        """Test that the view handles service exceptions gracefully."""
+        url = reverse(f'{self.base_url_name}-monthly-report')
+        
+        with patch('your_app.services.FinancialService.generate_financial_report') as mocked_service:
+            # Simulate an error in the service (e.g., invalid month)
+            mocked_service.side_effect = Exception("Invalid month provided")
+            
+            response = self.client.get(url, {'month': 13, 'year': 2024})
+            
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(response.data['error'], "Invalid month provided")
+
+    def test_current_period_summary(self):
+        """Test the combined current period report."""
+        url = reverse(f'{self.base_url_name}-current-period')
+        
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('this_week', response.data['data'])
+        self.assertIn('this_month', response.data['data'])
+        self.assertIn('this_year', response.data['data'])                
