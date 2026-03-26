@@ -414,4 +414,52 @@ class FinancialReportsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('this_week', response.data['data'])
         self.assertIn('this_month', response.data['data'])
-        self.assertIn('this_year', response.data['data'])                
+        self.assertIn('this_year', response.data['data'])
+        
+        
+        
+        
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from unittest.mock import patch
+
+class ProfitReportViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('profit-report') # Ensure this matches your urls.py name
+
+    @patch('your_app.views.get_profit_calculations')
+    def test_get_daily_profits_default(self, mock_calc):
+        """Test that the view defaults to 'daily' if no period is provided."""
+        mock_calc.return_value = {"profit": 100}
+        
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_calc.assert_called_once_with('daily')
+        self.assertEqual(response.data['profit'], 100)
+
+    @patch('your_app.views.get_overall_profits')
+    def test_get_overall_profits(self, mock_overall):
+        """Test the branching logic for the 'overall' period."""
+        mock_overall.return_value = {"total_profit": 5000}
+        
+        response = self.client.get(self.url, {'period': 'overall'})
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_overall.assert_called_once()
+        self.assertEqual(response.data['total_profit'], 5000)
+
+    @patch('your_app.views.get_profit_calculations')
+    def test_invalid_period_value_error(self, mock_calc):
+        """Test that a ValueError from the report helper returns a 400."""
+        mock_calc.side_effect = ValueError("Invalid period specified")
+        
+        response = self.client.get(self.url, {'period': 'invalid_choice'})
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], "Invalid period specified")                
