@@ -166,4 +166,65 @@ class ProductViewSetTests(APITestCase):
         """Test DELETE /products/{id}/ removes the record."""
         response = self.client.delete(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Product.objects.count(), 0)                
+        self.assertEqual(Product.objects.count(), 0)
+        
+        
+        
+        
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from .models import Sale, Product
+
+class SaleViewSetTests(APITestCase):
+    def setUp(self):
+        # We need a product to sell!
+        self.product = Product.objects.create(
+            name="Laptop",
+            price=1000.00,
+            stock=5
+        )
+        self.list_url = reverse('sale-list')
+
+    def test_create_sale_success(self):
+        """Test creating a sale updates the database and returns 201."""
+        data = {
+            "product": self.product.id,
+            "quantity": 2,
+            # 'total_price' might be calculated automatically in your model/serializer
+        }
+        response = self.client.post(self.list_url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Sale.objects.count(), 1)
+        
+        # Verify side effects: If your Sale model reduces Product stock, check it here:
+        self.product.refresh_from_db()
+        # self.assertEqual(self.product.stock, 3) # Uncomment if you have stock logic
+
+    def test_create_sale_insufficient_stock(self):
+        """
+        Test that a sale fails if quantity exceeds stock 
+        (Assuming your serializer/model handles this validation).
+        """
+        data = {
+            "product": self.product.id,
+            "quantity": 100  # More than the 5 we have in stock
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        
+        # If your logic raises a ValidationError, it should be a 400
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_sales(self):
+        """Test retrieving all sales records."""
+        # Create a dummy sale first
+        Sale.objects.create(product=self.product, quantity=1)
+        
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)                
