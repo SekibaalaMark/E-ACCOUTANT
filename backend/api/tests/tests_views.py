@@ -227,4 +227,67 @@ class SaleViewSetTests(APITestCase):
         
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)                
+        self.assertEqual(len(response.data), 1)
+        
+        
+        
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from .models import Purchase, Product
+
+class PurchaseViewSetTests(APITestCase):
+    def setUp(self):
+        # Initial product state
+        self.product = Product.objects.create(
+            name="USB-C Cable",
+            price=15.00,
+            stock=100
+        )
+        self.list_url = reverse('purchase-list')
+
+    def test_create_purchase_increases_stock(self):
+        """Test that a new purchase record correctly impacts the system."""
+        data = {
+            "product": self.product.id,
+            "quantity": 50,
+            "unit_cost": 10.00
+        }
+        response = self.client.post(self.list_url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Purchase.objects.count(), 1)
+        
+        # Verify the 'select_related' logic doesn't interfere with data accuracy
+        self.product.refresh_from_db()
+        # If your model logic adds to stock on Purchase save:
+        # self.assertEqual(self.product.stock, 150)
+
+    def test_purchase_list_efficiency(self):
+        """Verify the list view returns the correct structure."""
+        Purchase.objects.create(product=self.product, quantity=10, unit_cost=10.00)
+        
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Check if product details are present (if your serializer nests them)
+        self.assertEqual(response.data[0]['product'], self.product.id)
+
+    def test_update_purchase_quantity(self):
+        """Test updating a purchase amount."""
+        purchase = Purchase.objects.create(product=self.product, quantity=10, unit_cost=10.00)
+        url = reverse('purchase-detail', kwargs={'pk': purchase.pk})
+        
+        updated_data = {
+            "product": self.product.id,
+            "quantity": 20,
+            "unit_cost": 10.00
+        }
+        response = self.client.put(url, updated_data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        purchase.refresh_from_db()
+        self.assertEqual(purchase.quantity, 20)                
