@@ -462,4 +462,62 @@ class ProfitReportViewTests(APITestCase):
         response = self.client.get(self.url, {'period': 'invalid_choice'})
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['error'], "Invalid period specified")                
+        self.assertEqual(response.data['error'], "Invalid period specified")
+        
+        
+        
+        
+
+
+import io
+import csv
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from unittest.mock import patch
+
+class ProfitReportCSVViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('profit-report-csv')  # Adjust to your urls.py name
+
+    @patch('your_app.views.get_profit_calculations')
+    def test_csv_download_headers_and_content(self, mock_calc):
+        """Test that the CSV response has the correct headers and data rows."""
+        # Mock data representing what your report functions return
+        mock_calc.return_value = [
+            {'period': '2024-03-20', 'revenue': 1000, 'cogs': 600, 'expenses': 100, 'profit': 300}
+        ]
+        
+        response = self.client.get(self.url, {'period': 'daily'})
+
+        # 1. Assert Response Type
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment; filename="daily_profits.csv"', response['Content-Disposition'])
+
+        # 2. Parse and Assert CSV Content
+        content = response.content.decode('utf-8')
+        cvs_reader = csv.reader(io.StringIO(content))
+        rows = list(cvs_reader)
+
+        # Check Header
+        self.assertEqual(rows[0], ['Period', 'Revenue', 'COGS', 'Expenses', 'Profit'])
+        # Check Data Row
+        self.assertEqual(rows[1], ['2024-03-20', '1000', '600', '100', '300'])
+
+    @patch('your_app.views.get_overall_profits')
+    def test_csv_overall_format(self, mock_overall):
+        """Test the 'overall' period formatting in CSV."""
+        mock_overall.return_value = {
+            'revenue': 5000, 'cogs': 3000, 'expenses': 500, 'profit': 1500
+            # Note: overall might not have a 'period' key in your dictionary
+        }
+        
+        response = self.client.get(self.url, {'period': 'overall'})
+        
+        content = response.content.decode('utf-8')
+        rows = list(csv.reader(io.StringIO(content)))
+        
+        # Verify the 'period' column defaults to 'Overall' as per your code
+        self.assertEqual(rows[1][0], 'Overall')
+        self.assertEqual(rows[1][4], '1500')                
