@@ -520,4 +520,72 @@ class ProfitReportCSVViewTests(APITestCase):
         
         # Verify the 'period' column defaults to 'Overall' as per your code
         self.assertEqual(rows[1][0], 'Overall')
-        self.assertEqual(rows[1][4], '1500')                
+        self.assertEqual(rows[1][4], '1500')
+        
+        
+        
+        
+        
+
+
+
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.utils import timezone
+from .models import Sale, Product
+from datetime import datetime
+
+class MonthlySalesReportTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('monthly-sales-report')
+        
+        # 1. Create Products
+        self.p1 = Product.objects.create(name="Widget A", price=100)
+        self.p2 = Product.objects.create(name="Gadget B", price=200)
+
+        # 2. Create Overlapping Sales
+        # Sale 1: Product A, January
+        Sale.objects.create(
+            product=self.p1, 
+            quantity=2, 
+            total_price=200, 
+            date=datetime(2024, 1, 5, tzinfo=timezone.utc)
+        )
+        # Sale 2: Product A, January (Should aggregate with Sale 1)
+        Sale.objects.create(
+            product=self.p1, 
+            quantity=3, 
+            total_price=300, 
+            date=datetime(2024, 1, 15, tzinfo=timezone.utc)
+        )
+        # Sale 3: Product A, February
+        Sale.objects.create(
+            product=self.p1, 
+            quantity=1, 
+            total_price=100, 
+            date=datetime(2024, 2, 1, tzinfo=timezone.utc)
+        )
+
+    def test_monthly_aggregation_logic(self):
+        """Verify that sales are grouped by month and product correctly."""
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # We expect 2 rows for Product A (one for Jan, one for Feb)
+        # Product A, January should have total_quantity = 5 (2 + 3)
+        jan_data = next(item for item in response.data 
+                        if item['product__name'] == "Widget A" 
+                        and "2024-01-01" in item['month'])
+        
+        self.assertEqual(jan_data['total_quantity'], 5)
+        self.assertEqual(jan_data['total_sales'], 500)
+
+    def test_ordering_logic(self):
+        """Verify report is ordered by month and then product name."""
+        response = self.client.get(self.url)
+        
+        # Check that the first item is from January
+        self.assertTrue(response.data[0]['month'].startswith("2024-01-01"))                
