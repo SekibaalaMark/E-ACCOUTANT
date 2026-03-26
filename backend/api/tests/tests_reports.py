@@ -67,3 +67,35 @@ class ProfitReportLogicTests(TestCase):
         """Ensure the function guards against bad input."""
         with self.assertRaises(ValueError):
             get_profit_calculations('hourly')
+            
+            
+            
+            
+
+
+
+def test_get_overall_profits_math(self):
+        """Test the all-time summary calculation."""
+        # Current Setup has: 
+        # Sales: 2000 Rev, 1200 COGS
+        # Expenses: 100
+        # Expected: 2000 - 1200 - 100 = 700
+        
+        data = get_overall_profits()
+        
+        self.assertEqual(data['revenue'], 2000.0)
+        self.assertEqual(data['cogs'], 1200.0)
+        self.assertEqual(data['expenses'], 100.0)
+        self.assertEqual(data['profit'], 700.0)
+
+def test_overall_profits_empty_db(self):
+    """Test that the function returns 0.0 instead of crashing when no data exists."""
+    # Wipe the data created in setUp for this specific test
+    Sale.objects.all().delete()
+    Expense.objects.all().delete()
+    
+    data = get_overall_profits()
+    
+    self.assertEqual(data['revenue'], 0.0)
+    self.assertEqual(data['profit'], 0.0)
+    self.assertIsInstance(data['profit'], float)
